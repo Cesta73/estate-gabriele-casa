@@ -41,6 +41,7 @@ button { cursor: pointer; }
 main { grid-column: 2; width: min(1320px, 100%); margin: 0 auto; padding: 28px 42px 70px; }
 .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
 .account-area { display: flex; align-items: center; gap: 9px; }
+.role-chip { color: var(--green); background: var(--green-soft); border-radius: 20px; padding: 7px 10px; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
 .sync-chip { display: flex; gap: 7px; align-items: center; border: 1px solid var(--line); color: var(--muted); background: var(--card); border-radius: 22px; padding: 8px 11px; font-size: 10px; }
 .sync-chip span, .connected-card > span { width: 8px; height: 8px; border-radius: 50%; background: var(--amber); }
 .sync-chip.online span, .connected-card > span { background: #3f9e77; box-shadow: 0 0 0 4px rgba(63,158,119,.12); }
@@ -95,6 +96,16 @@ main { grid-column: 2; width: min(1320px, 100%); margin: 0 auto; padding: 28px 4
 .task-footer { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: auto; }
 .when-pill { color: var(--muted); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; }
 .do-button { width: 34px; height: 34px; border: 0; border-radius: 50%; background: var(--green); color: white; font-size: 18px; font-weight: 900; }
+.suggest-button { border: 0; color: #7b5417; background: var(--amber-soft); border-radius: 18px; padding: 7px 9px; font-size: 10px; font-weight: 900; }
+.assignment-heading { margin-top: 27px; }
+.assignment-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.assignment-card { position: relative; overflow: hidden; padding: 18px; border-radius: 18px; color: var(--ink); background: var(--amber-soft); border: 1px solid rgba(164,111,25,.12); }
+.assignment-card.done { background: var(--green-soft); opacity: .72; }
+.assignment-card h3 { margin: 9px 0 5px; font-size: 16px; }
+.assignment-card p { color: #725b36; font-size: 12px; line-height: 1.5; margin: 0 0 14px; }
+.assignment-card small { color: var(--muted); }
+.assignment-actions { display: flex; gap: 7px; align-items: center; margin-top: 13px; }
+.assignment-actions .primary, .assignment-actions .secondary, .assignment-actions .danger { padding: 8px 10px; font-size: 11px; }
 .filter-row { display: flex; gap: 15px; align-items: center; justify-content: space-between; margin-bottom: 18px; }
 .search-box { position: relative; display: flex; align-items: center; }
 .search-box span { position: absolute; left: 13px; color: var(--muted); font-size: 11px; text-transform: uppercase; font-weight: 800; }
@@ -148,7 +159,7 @@ dialog form { position: relative; padding: 28px; }
 dialog h2 { margin: 6px 0 17px; letter-spacing: -.035em; }
 .dialog-close { position: absolute; right: 15px; top: 14px; width: 32px; height: 32px; border: 0; border-radius: 50%; background: var(--paper); color: var(--ink); font-size: 20px; }
 dialog label { display: block; color: var(--muted); font-size: 11px; font-weight: 850; text-transform: uppercase; letter-spacing: .04em; margin: 12px 0; }
-dialog input, dialog textarea { width: 100%; color: var(--ink); background: white; border: 1px solid var(--line); border-radius: 10px; padding: 10px; margin-top: 6px; outline: none; text-transform: none; }
+dialog input, dialog textarea, dialog select { width: 100%; color: var(--ink); background: white; border: 1px solid var(--line); border-radius: 10px; padding: 10px; margin-top: 6px; outline: none; text-transform: none; }
 .task-rule-box { color: #4a655d; background: var(--green-soft); border-radius: 11px; padding: 12px; font-size: 12px; line-height: 1.5; }
 .calculated-pay { display: flex; justify-content: space-between; align-items: center; color: var(--muted); background: var(--amber-soft); border-radius: 11px; padding: 13px; font-size: 12px; margin-top: 15px; }
 .calculated-pay strong { color: #8a5d16; font-size: 17px; }
@@ -160,12 +171,17 @@ dialog input, dialog textarea { width: 100%; color: var(--ink); background: whit
 .split-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 15px; }
 .connected-card { display: flex; align-items: center; gap: 12px; padding: 15px; border-radius: 13px; background: var(--green-soft); }
 .connected-card p { color: var(--muted); margin: 3px 0 0; font-size: 12px; }
+.invite-manager { margin-top: 15px; padding: 14px; border: 1px solid var(--line); border-radius: 13px; }
+.child-mode .parent-only, .child-mode .owner-only { display: none !important; }
+.parent-mode .child-only { display: none !important; }
+.adult-mode .owner-only { display: none !important; }
 #toast { position: fixed; z-index: 20; bottom: 25px; right: 25px; color: white; background: var(--green-dark); padding: 12px 17px; border-radius: 12px; font-size: 12px; font-weight: 750; opacity: 0; transform: translateY(15px); pointer-events: none; transition: .2s; box-shadow: var(--shadow); }
 #toast.show { opacity: 1; transform: translateY(0); }
 .mobile-nav { display: none; }
 
 @media (max-width: 1050px) {
   .task-grid, .task-grid.compact { grid-template-columns: repeat(2, 1fr); }
+  .assignment-grid { grid-template-columns: repeat(2, 1fr); }
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
   .review-card { grid-template-columns: 1fr; }
 }
@@ -181,6 +197,7 @@ dialog input, dialog textarea { width: 100%; color: var(--ink); background: whit
   .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 9px; }
   .stat-card { padding: 15px; }
   .task-grid, .task-grid.compact { grid-template-columns: 1fr; }
+  .assignment-grid { grid-template-columns: 1fr; }
   .task-card { min-height: 180px; }
   .filter-row, .section-heading.page-heading { align-items: stretch; flex-direction: column; }
   .search-box input { width: 100%; }
@@ -191,4 +208,5 @@ dialog input, dialog textarea { width: 100%; color: var(--ink); background: whit
   .mobile-nav { position: fixed; z-index: 8; display: grid; grid-template-columns: repeat(4, 1fr); left: 9px; right: 9px; bottom: 9px; color: var(--muted); background: rgba(255,253,248,.95); backdrop-filter: blur(10px); border: 1px solid var(--line); border-radius: 17px; padding: 6px; box-shadow: var(--shadow); }
   .mobile-nav .nav-item { justify-content: center; padding: 10px 4px; font-size: 11px; }
   .mobile-nav .nav-item.active { color: white; background: var(--green); }
+  .child-mode .mobile-nav { grid-template-columns: repeat(3, 1fr); }
 }

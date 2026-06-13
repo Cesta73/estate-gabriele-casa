@@ -36,6 +36,18 @@ Le chiavi presenti in `config.js` sono pubbliche per progetto. La protezione dei
 
 Ogni controllo registra il nome della persona che lo ha eseguito. Le modifiche vengono salvate sul dispositivo e sincronizzate automaticamente.
 
+## Ruoli e codici invito
+
+- Il primo genitore crea la famiglia come proprietario.
+- Il proprietario sceglie un codice **genitore** e un codice **figlio**, diversi tra loro.
+- Chi entra con il codice genitore puo suggerire attivita, controllare i lavori e segnare i pagamenti.
+- Chi entra con il codice figlio puo vedere e registrare le missioni, ma non puo usare i controlli da adulto.
+- Il proprietario puo cambiare entrambi i codici dalle impostazioni della webapp.
+
+I genitori possono aggiungere lavori alla bacheca **Missioni per oggi**, scegliendo giorno e messaggio. Gabriele puo aprire la missione suggerita e registrarla come svolta.
+
+Quando viene pubblicato un aggiornamento dello schema, eseguire nuovamente tutto `supabase/schema.sql` nel SQL Editor: lo script e progettato per conservare i dati esistenti.
+
 ## Funzioni
 
 - attivita ricostruite dal PDF originale;
@@ -45,3 +57,5 @@ Ogni controllo registra il nome della persona che lo ha eseguito. Le modifiche v
 - diario filtrabile ed esportabile in CSV;
 - attivita personalizzate;
 - aggiornamenti condivisi in tempo reale.
+- ruoli distinti per proprietario, genitori e figlio;
+- bacheca giornaliera dei lavori suggeriti.

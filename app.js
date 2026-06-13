@@ -1,5 +1,6 @@
 const TASKS_KEY = "gabriele-summer-tasks-v1";
 const ENTRIES_KEY = "gabriele-summer-entries-v1";
+const ASSIGNMENTS_KEY = "gabriele-summer-assignments-v1";
 
 const seedTasks = [
   { id: "vacuum-room", name: "Aspirapolvere in una stanza", pay: 1, symbol: "ASP", when: "Da concordare", kind: "agreement", rules: "Spostare quello che ingombra, raccogliere le immondizie grossolane, passare bene l'aspirapolvere e rimettere in ordine quanto spostato." },
@@ -24,6 +25,7 @@ const seedTasks = [
 
 let tasks = read(TASKS_KEY, seedTasks);
 let entries = read(ENTRIES_KEY, []);
+let assignments = read(ASSIGNMENTS_KEY, []);
 let taskFilter = "all";
 let historyFilter = "all";
 let cloud = null;
@@ -33,6 +35,7 @@ let member = null;
 let cloudChannel = null;
 let syncTimer = null;
 let syncState = "local";
+let currentAssignmentId = null;
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -48,9 +51,13 @@ function read(key, fallback) {
 function save() {
   localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
   localStorage.setItem(ENTRIES_KEY, JSON.stringify(entries));
+  localStorage.setItem(ASSIGNMENTS_KEY, JSON.stringify(assignments));
   scheduleCloudSave();
 }
 function taskById(id) { return tasks.find((task) => task.id === id); }
+function isParent() { return !member || member.role === "owner" || member.role === "adult"; }
+function isOwner() { return member?.role === "owner"; }
+function roleLabel(role) { return { owner: "Genitore proprietario", adult: "Genitore", child: "Figlio" }[role] || "Membro"; }
 function entryValue(entry) {
   const task = taskById(entry.taskId);
   return task ? task.pay * entry.quantity : entry.value || 0;
@@ -92,7 +99,7 @@ function entryTimestamp(entry) {
   return entry.paidAt || entry.reviewedAt || entry.updatedAt || entry.createdAt || "";
 }
 
-function mergeRemoteState(remoteTasks = [], remoteEntries = []) {
+function mergeRemoteState(remoteTasks = [], remoteEntries = [], remoteAssignments = []) {
   const mergedTasks = [...new Map([...tasks, ...remoteTasks].map((task) => [task.id, task])).values()];
   const entryMap = new Map(remoteEntries.map((entry) => [entry.id, entry]));
   entries.forEach((localEntry) => {
@@ -100,11 +107,21 @@ function mergeRemoteState(remoteTasks = [], remoteEntries = []) {
     if (!remoteEntry || entryTimestamp(localEntry) > entryTimestamp(remoteEntry)) entryMap.set(localEntry.id, localEntry);
   });
   const mergedEntries = [...entryMap.values()];
-  const remoteChanged = JSON.stringify(mergedTasks) !== JSON.stringify(remoteTasks) || JSON.stringify(mergedEntries) !== JSON.stringify(remoteEntries);
+  const assignmentMap = new Map(remoteAssignments.map((assignment) => [assignment.id, assignment]));
+  assignments.forEach((localAssignment) => {
+    const remoteAssignment = assignmentMap.get(localAssignment.id);
+    if (!remoteAssignment || entryTimestamp(localAssignment) > entryTimestamp(remoteAssignment)) assignmentMap.set(localAssignment.id, localAssignment);
+  });
+  const mergedAssignments = [...assignmentMap.values()];
+  const remoteChanged = JSON.stringify(mergedTasks) !== JSON.stringify(remoteTasks)
+    || JSON.stringify(mergedEntries) !== JSON.stringify(remoteEntries)
+    || JSON.stringify(mergedAssignments) !== JSON.stringify(remoteAssignments);
   tasks = mergedTasks;
   entries = mergedEntries;
+  assignments = mergedAssignments;
   localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
   localStorage.setItem(ENTRIES_KEY, JSON.stringify(entries));
+  localStorage.setItem(ASSIGNMENTS_KEY, JSON.stringify(assignments));
   return remoteChanged;
 }
 
@@ -115,6 +132,7 @@ async function syncNow() {
     family_id: family.id,
     tasks,
     entries,
+    assignments,
     updated_at: new Date().toISOString()
   });
   if (error) {
@@ -144,14 +162,15 @@ async function loadFamily() {
   }
   family = { id: info.family_id, name: info.family_name };
   member = { display_name: info.display_name, role: info.member_role };
-  const { data: remote, error: stateError } = await cloud.from("family_state").select("tasks, entries").eq("family_id", family.id).single();
+  applyRole();
+  const { data: remote, error: stateError } = await cloud.from("family_state").select("*").eq("family_id", family.id).single();
   if (stateError) {
     console.error(stateError);
     showToast("Impossibile caricare i dati condivisi.");
     return;
   }
-  if (remote.tasks?.length || remote.entries?.length) {
-    const needsUpload = mergeRemoteState(remote.tasks, remote.entries);
+  if (remote.tasks?.length || remote.entries?.length || remote.assignments?.length) {
+    const needsUpload = mergeRemoteState(remote.tasks, remote.entries, remote.assignments);
     if (needsUpload) await syncNow();
   } else if (tasks.length || entries.length) {
     await syncNow();
@@ -166,7 +185,7 @@ function subscribeToFamily() {
   if (cloudChannel) cloud.removeChannel(cloudChannel);
   cloudChannel = cloud.channel(`family-${family.id}`)
     .on("postgres_changes", { event: "UPDATE", schema: "public", table: "family_state", filter: `family_id=eq.${family.id}` }, (payload) => {
-      const needsUpload = mergeRemoteState(payload.new.tasks, payload.new.entries);
+      const needsUpload = mergeRemoteState(payload.new.tasks, payload.new.entries, payload.new.assignments);
       if (needsUpload) scheduleCloudSave();
       setSyncState("online", "Dati aggiornati");
       renderAll();
@@ -190,17 +209,34 @@ async function initCloud() {
     if (!cloudUser) {
       family = null;
       member = null;
+      applyRole();
       setSyncState("local", "Accedi per sincronizzare");
       renderSyncDialog();
     }
   });
 }
 
+function applyRole() {
+  document.body.classList.remove("child-mode", "parent-mode", "adult-mode");
+  if (!member) {
+    $("#roleChip").classList.add("hidden");
+    return;
+  }
+  document.body.classList.add(member.role === "child" ? "child-mode" : "parent-mode");
+  if (member.role === "adult") document.body.classList.add("adult-mode");
+  $("#roleChip").textContent = roleLabel(member.role);
+  $("#roleChip").classList.remove("hidden");
+  const reviewItems = $$('[data-section="review"]');
+  reviewItems.forEach((item) => item.classList.toggle("hidden", member.role === "child"));
+  if (member.role === "child" && $("#review").classList.contains("active")) navigate("dashboard");
+  $("#pageTitle").textContent = member.role === "child" ? `Ciao, ${member.display_name}!` : `Ciao, ${member.display_name}`;
+}
+
 function renderTaskCard(task) {
   return `<article class="task-card">
     <div class="task-card-top"><span class="task-symbol">${task.symbol}</span><span class="pay-pill">${money(task.pay)}${task.perHour ? " / ora" : ""}</span></div>
     <h3>${safe(task.name)}</h3><p>${safe(task.rules || "Regole da concordare insieme.")}</p>
-    <div class="task-footer"><span class="when-pill">${safe(task.when || "Da concordare")}</span><button class="do-button" data-complete="${task.id}" aria-label="Registra ${safe(task.name)}">+</button></div>
+    <div class="task-footer"><span class="when-pill">${safe(task.when || "Da concordare")}</span><div>${isParent() ? `<button class="suggest-button" data-suggest="${task.id}">Suggerisci</button>` : ""} <button class="do-button" data-complete="${task.id}" aria-label="Registra ${safe(task.name)}">+</button></div></div>
   </article>`;
 }
 
@@ -230,7 +266,28 @@ function renderDashboard() {
   }).join("") : `<div class="empty">Qui appariranno i primi lavori registrati.</div>`;
 }
 
+function renderAssignments() {
+  const visible = [...assignments]
+    .filter((assignment) => assignment.date >= today() && assignment.status !== "dismissed")
+    .sort((a, b) => a.date.localeCompare(b.date) || b.createdAt.localeCompare(a.createdAt));
+  $("#assignmentList").innerHTML = visible.length ? visible.map((assignment) => {
+    const task = taskById(assignment.taskId);
+    const done = assignment.status === "done";
+    return `<article class="assignment-card ${done ? "done" : ""}">
+      <span class="status ${done ? "status-approved" : "status-pending"}">${done ? "Completata" : assignment.date === today() ? "Per oggi" : dateText(assignment.date)}</span>
+      <h3>${safe(task?.name || assignment.taskName)}</h3>
+      <p>${safe(assignment.note || "Missione suggerita dalla famiglia.")}</p>
+      <small>Suggerita da ${safe(assignment.suggestedBy || "un genitore")}</small>
+      <div class="assignment-actions">
+        ${!done ? `<button class="primary" data-complete="${assignment.taskId}" data-assignment="${assignment.id}">Segna svolta</button>` : ""}
+        ${isParent() ? `<button class="danger" data-dismiss-assignment="${assignment.id}">Rimuovi</button>` : ""}
+      </div>
+    </article>`;
+  }).join("") : `<div class="empty">Nessuna missione suggerita per oggi. Puoi sceglierne una liberamente.</div>`;
+}
+
 function renderReview() {
+  if (!isParent()) return;
   const pending = entries.filter((entry) => entry.status === "pending");
   $("#reviewPendingCount").textContent = pending.length;
   $("#reviewPendingValue").textContent = money(pending.reduce((sum, entry) => sum + entryValue(entry), 0));
@@ -251,27 +308,31 @@ function renderHistory() {
   $("#historyRows").innerHTML = filtered.length ? filtered.map((entry) => {
     const task = taskById(entry.taskId);
     const control = entry.adultNote ? `${safe(entry.adultNote)}${entry.reviewedBy ? `<br><small>di ${safe(entry.reviewedBy)}</small>` : ""}` : "-";
-    return `<tr><td>${dateText(entry.date)}</td><td><strong>${safe(task?.name || entry.taskName)}</strong></td><td>${safe(entry.note || "-")}</td><td>${control}</td><td><span class="status status-${entry.status}">${statusLabel(entry.status)}</span></td><td><strong>${money(entryValue(entry))}</strong></td></tr>`;
-  }).join("") : `<tr><td colspan="6"><div class="empty">Nessuna voce in questa vista.</div></td></tr>`;
+    return `<tr><td>${dateText(entry.date)}</td><td><strong>${safe(task?.name || entry.taskName)}</strong></td><td>${safe(entry.submittedBy || "-")}</td><td>${safe(entry.note || "-")}</td><td>${control}</td><td><span class="status status-${entry.status}">${statusLabel(entry.status)}</span></td><td><strong>${money(entryValue(entry))}</strong></td></tr>`;
+  }).join("") : `<tr><td colspan="7"><div class="empty">Nessuna voce in questa vista.</div></td></tr>`;
 }
 
 function renderAll() {
   renderTasks();
   renderDashboard();
+  renderAssignments();
   renderReview();
   renderHistory();
 }
 
 function navigate(section) {
+  if (section === "review" && !isParent()) section = "dashboard";
   $$(".page").forEach((page) => page.classList.toggle("active", page.id === section));
   $$(".nav-item[data-section]").forEach((item) => item.classList.toggle("active", item.dataset.section === section));
-  const titles = { dashboard: "Ciao, Gabriele!", tasks: "Le tue missioni", review: "Controllo adulto", history: "Il tuo diario" };
+  const greeting = member?.display_name ? `Ciao, ${member.display_name}!` : "Ciao, Gabriele!";
+  const titles = { dashboard: greeting, tasks: "Le tue missioni", review: "Controllo genitori", history: "Il diario di famiglia" };
   $("#pageTitle").textContent = titles[section];
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-function openComplete(taskId) {
+function openComplete(taskId, assignmentId = null) {
   const task = taskById(taskId);
+  currentAssignmentId = assignmentId;
   $("#completeTaskId").value = task.id;
   $("#completeTitle").textContent = task.name;
   $("#completeRule").textContent = task.rules;
@@ -281,6 +342,14 @@ function openComplete(taskId) {
   $("#quantityLabel").firstChild.textContent = task.perHour ? "Quante ore?" : "Quante volte?";
   updateCalculatedPay();
   $("#completeDialog").showModal();
+}
+
+function openSuggest(taskId = "") {
+  if (!isParent()) return;
+  $("#suggestTask").innerHTML = tasks.map((task) => `<option value="${task.id}" ${task.id === taskId ? "selected" : ""}>${safe(task.name)} · ${money(task.pay)}</option>`).join("");
+  $("#suggestDate").value = today();
+  $("#suggestNote").value = "";
+  $("#suggestDialog").showModal();
 }
 
 function updateCalculatedPay() {
@@ -296,7 +365,10 @@ function renderSyncDialog() {
   $("#connectedStep").classList.toggle("hidden", !configured || !family);
   if (family) {
     $("#connectedFamilyName").textContent = family.name;
-    $("#connectedUserName").textContent = `${member?.display_name || cloudUser?.email} · ${cloudUser?.email || ""}`;
+    $("#connectedUserName").textContent = `${member?.display_name || cloudUser?.email} · ${roleLabel(member?.role)} · ${cloudUser?.email || ""}`;
+    $("#connectedHelp").textContent = isParent()
+      ? "Invia il codice genitore all'altro genitore e il codice figlio a Gabriele. Il ruolo viene assegnato automaticamente."
+      : "Hai effettuato l'accesso come figlio. Puoi vedere e registrare le missioni, mentre i controlli restano ai genitori.";
   }
 }
 
@@ -311,9 +383,18 @@ document.addEventListener("click", (event) => {
   const nav = event.target.closest("[data-section], [data-go]");
   if (nav) navigate(nav.dataset.section || nav.dataset.go);
   const complete = event.target.closest("[data-complete]");
-  if (complete) openComplete(complete.dataset.complete);
+  if (complete) openComplete(complete.dataset.complete, complete.dataset.assignment || null);
+  const suggest = event.target.closest("[data-suggest]");
+  if (suggest) openSuggest(suggest.dataset.suggest);
+  const dismiss = event.target.closest("[data-dismiss-assignment]");
+  if (dismiss && isParent()) {
+    const assignment = assignments.find((item) => item.id === dismiss.dataset.dismissAssignment);
+    assignment.status = "dismissed";
+    assignment.updatedAt = new Date().toISOString();
+    save(); renderAll(); showToast("Missione rimossa dalla bacheca.");
+  }
   const review = event.target.closest("[data-review]");
-  if (review) {
+  if (review && isParent()) {
     const entry = entries.find((item) => item.id === review.dataset.review);
     entry.status = review.dataset.result;
     entry.adultNote = $(`#note-${entry.id}`).value.trim();
@@ -334,18 +415,41 @@ $("#completeForm").addEventListener("submit", (event) => {
     note: $("#completeNote").value.trim(), submittedBy: member?.display_name || "Gabriele",
     status: "pending", createdAt: new Date().toISOString()
   });
+  if (currentAssignmentId) {
+    const assignment = assignments.find((item) => item.id === currentAssignmentId);
+    if (assignment) {
+      assignment.status = "done";
+      assignment.completedBy = member?.display_name || "Gabriele";
+      assignment.updatedAt = new Date().toISOString();
+    }
+  }
+  currentAssignmentId = null;
   save(); renderAll(); $("#completeDialog").close(); showToast("Missione inviata al controllo.");
 });
 
-$("#customTaskButton").addEventListener("click", () => $("#customDialog").showModal());
+$("#customTaskButton").addEventListener("click", () => { if (isParent()) $("#customDialog").showModal(); });
 $("#customForm").addEventListener("submit", (event) => {
   event.preventDefault();
+  if (!isParent()) return;
   tasks.push({
     id: `custom-${crypto.randomUUID()}`, name: $("#customName").value.trim(), pay: Number($("#customPay").value),
     symbol: "NEW", when: $("#customWhen").value.trim() || "Da concordare", kind: "agreement",
     rules: $("#customRules").value.trim() || "Regole da concordare insieme.", addedBy: member?.display_name || "Adulto"
   });
   save(); renderAll(); $("#customDialog").close(); event.target.reset(); showToast("Nuova attivita aggiunta.");
+});
+
+$("#newSuggestionButton").addEventListener("click", () => openSuggest());
+$("#suggestForm").addEventListener("submit", (event) => {
+  event.preventDefault();
+  if (!isParent()) return;
+  const task = taskById($("#suggestTask").value);
+  assignments.push({
+    id: crypto.randomUUID(), taskId: task.id, taskName: task.name, date: $("#suggestDate").value,
+    note: $("#suggestNote").value.trim(), status: "suggested",
+    suggestedBy: member?.display_name || "Genitore", createdAt: new Date().toISOString()
+  });
+  save(); renderAll(); $("#suggestDialog").close(); showToast("Missione aggiunta alla bacheca.");
 });
 
 $("#taskSearch").addEventListener("input", renderTasks);
@@ -365,6 +469,7 @@ $("#historyFilters").addEventListener("click", (event) => {
 });
 
 $("#payButton").addEventListener("click", () => {
+  if (!isParent()) return;
   const approved = entries.filter((entry) => entry.status === "approved");
   if (!approved.length) return;
   approved.forEach((entry) => {
@@ -376,6 +481,7 @@ $("#payButton").addEventListener("click", () => {
 });
 
 $("#exportButton").addEventListener("click", () => {
+  if (!isParent()) return;
   const header = "Data,Attivita,Nota,Stato,Nota controllo,Controllato da,Compenso\n";
   const rows = entries.map((entry) => {
     const task = taskById(entry.taskId);
@@ -405,9 +511,11 @@ $("#sendLinkButton").addEventListener("click", async () => {
 $("#createFamilyButton").addEventListener("click", async () => {
   const name = $("#memberName").value.trim();
   const familyName = $("#familyName").value.trim();
-  const code = $("#familyCode").value;
-  if (!name || !familyName || code.length < 8) return showToast("Inserisci nome, famiglia e un codice di almeno 8 caratteri.");
-  const { error } = await cloud.rpc("create_family", { requested_name: familyName, invite_code: code, member_name: name });
+  const parentCode = $("#parentCode").value;
+  const childCode = $("#childCode").value;
+  if (!name || !familyName || parentCode.length < 8 || childCode.length < 8) return showToast("Inserisci nome, famiglia e due codici di almeno 8 caratteri.");
+  if (parentCode === childCode) return showToast("I codici genitore e figlio devono essere diversi.");
+  const { error } = await cloud.rpc("create_family", { requested_name: familyName, parent_code: parentCode, child_code: childCode, member_name: name });
   if (error) return showToast(`Creazione non riuscita: ${error.message}`);
   await loadFamily();
   showToast("Famiglia creata e dati sincronizzati.");
@@ -421,6 +529,17 @@ $("#joinFamilyButton").addEventListener("click", async () => {
   await loadFamily();
   showToast("Accesso alla famiglia completato.");
 });
+$("#updateCodesButton").addEventListener("click", async () => {
+  if (!isOwner()) return;
+  const parentCode = $("#newParentCode").value;
+  const childCode = $("#newChildCode").value;
+  if (parentCode.length < 8 || childCode.length < 8 || parentCode === childCode) return showToast("Usa due codici diversi di almeno 8 caratteri.");
+  const { error } = await cloud.rpc("update_invite_codes", { parent_code: parentCode, child_code: childCode });
+  if (error) return showToast(`Aggiornamento non riuscito: ${error.message}`);
+  $("#newParentCode").value = "";
+  $("#newChildCode").value = "";
+  showToast("Codici invito aggiornati.");
+});
 $("#refreshButton").addEventListener("click", async () => {
   await loadFamily();
   showToast("Dati aggiornati.");
@@ -432,10 +551,12 @@ $("#signOutButton").addEventListener("click", async () => {
   showToast("Uscita completata. I dati locali restano disponibili.");
 });
 $("#resetButton").addEventListener("click", () => {
+  if (!isParent()) return;
   if (!confirm("Cancellare tutto il diario e i pagamenti?")) return;
-  entries = []; save(); renderAll(); $("#dataDialog").close(); showToast("Diario cancellato.");
+  entries = []; assignments = []; save(); renderAll(); $("#dataDialog").close(); showToast("Diario e bacheca cancellati.");
 });
 $("#demoButton").addEventListener("click", () => {
+  if (!isParent()) return;
   const daysAgo = (days) => new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
   entries = [
     { id: crypto.randomUUID(), taskId: "beds", date: today(), quantity: 1, note: "Fatto prima di colazione.", status: "pending", createdAt: new Date().toISOString() },
@@ -443,10 +564,14 @@ $("#demoButton").addEventListener("click", () => {
     { id: crypto.randomUUID(), taskId: "dishwasher", date: daysAgo(2), quantity: 1, note: "", status: "paid", adultNote: "Ben fatto.", createdAt: new Date(Date.now() - 172800000).toISOString() },
     { id: crypto.randomUUID(), taskId: "dust", date: daysAgo(3), quantity: 1, note: "Ho fatto la mia camera.", status: "redo", adultNote: "Controlla anche la mensola alta.", createdAt: new Date(Date.now() - 259200000).toISOString() }
   ];
+  assignments = [
+    { id: crypto.randomUUID(), taskId: "beds", date: today(), note: "Prima di uscire, grazie.", status: "suggested", suggestedBy: member?.display_name || "Gianluca", createdAt: new Date().toISOString() }
+  ];
   save(); renderAll(); $("#dataDialog").close(); showToast("Dati di esempio caricati.");
 });
 
 $("#todayLabel").textContent = new Intl.DateTimeFormat("it-IT", { weekday: "long", day: "numeric", month: "long" }).format(new Date());
 renderAll();
 renderSyncDialog();
+applyRole();
 initCloud();

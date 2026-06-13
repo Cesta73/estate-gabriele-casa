@@ -33,6 +33,7 @@
           <h1 id="pageTitle">Ciao, Gabriele!</h1>
         </div>
         <div class="account-area">
+          <span class="role-chip hidden" id="roleChip"></span>
           <button class="sync-chip local" id="syncButton" title="Stato sincronizzazione"><span></span><b id="syncLabel">Solo su questo dispositivo</b></button>
           <button class="avatar-button" id="settingsButton" title="Gestisci dati">GC</button>
         </div>
@@ -75,6 +76,12 @@
           </article>
         </div>
 
+        <div class="section-heading assignment-heading">
+          <div><p class="eyebrow">Bacheca di famiglia</p><h2>Missioni per oggi</h2></div>
+          <button class="primary parent-only" id="newSuggestionButton">+ Suggerisci un lavoro</button>
+        </div>
+        <div class="assignment-grid" id="assignmentList"></div>
+
         <div class="section-heading">
           <div><p class="eyebrow">Partenza rapida</p><h2>Missioni consigliate</h2></div>
           <button class="text-button" data-go="tasks">Vedi tutte</button>
@@ -99,7 +106,7 @@
       <section class="page" id="tasks">
         <div class="section-heading page-heading">
           <div><p class="eyebrow">Dal foglio delle attivita</p><h2>Scegli una missione</h2></div>
-          <button class="primary" id="customTaskButton">+ Nuova attivita</button>
+          <button class="primary parent-only" id="customTaskButton">+ Nuova attivita</button>
         </div>
         <div class="filter-row">
           <label class="search-box"><span>Cerca</span><input id="taskSearch" type="search" placeholder="Nome o regola..."></label>
@@ -128,7 +135,7 @@
       <section class="page" id="history">
         <div class="section-heading page-heading">
           <div><p class="eyebrow">Tutto in ordine</p><h2>Diario delle attivita</h2></div>
-          <button class="secondary" id="exportButton">Esporta diario</button>
+          <button class="secondary parent-only" id="exportButton">Esporta diario</button>
         </div>
         <div class="history-filters" id="historyFilters">
           <button class="filter active" data-status="all">Tutto</button>
@@ -139,7 +146,7 @@
         </div>
         <div class="history-table-wrap">
           <table>
-            <thead><tr><th>Data</th><th>Attivita</th><th>Nota</th><th>Controllo</th><th>Stato</th><th>Compenso</th></tr></thead>
+            <thead><tr><th>Data</th><th>Attivita</th><th>Inserito da</th><th>Nota</th><th>Controllo</th><th>Stato</th><th>Compenso</th></tr></thead>
             <tbody id="historyRows"></tbody>
           </table>
         </div>
@@ -150,7 +157,7 @@
   <nav class="mobile-nav" aria-label="Navigazione mobile">
     <button class="nav-item active" data-section="dashboard">Oggi</button>
     <button class="nav-item" data-section="tasks">Attivita</button>
-    <button class="nav-item" data-section="review">Controlli</button>
+      <button class="nav-item" data-section="review">Controlli</button>
     <button class="nav-item" data-section="history">Diario</button>
   </nav>
 
@@ -182,6 +189,18 @@
     </form>
   </dialog>
 
+  <dialog id="suggestDialog">
+    <form method="dialog" id="suggestForm">
+      <button class="dialog-close" type="button" aria-label="Chiudi">&times;</button>
+      <p class="eyebrow">Bacheca di famiglia</p>
+      <h2>Suggerisci un lavoro</h2>
+      <label>Attivita<select id="suggestTask" required></select></label>
+      <label>Per quale giorno?<input id="suggestDate" type="date" required></label>
+      <label>Messaggio per Gabriele<textarea id="suggestNote" rows="3" placeholder="Es. Sarebbe utile farlo prima di cena"></textarea></label>
+      <button class="primary wide" value="default" type="submit">Aggiungi alla bacheca</button>
+    </form>
+  </dialog>
+
   <dialog id="dataDialog">
     <form method="dialog">
       <button class="dialog-close" type="button" aria-label="Chiudi">&times;</button>
@@ -191,8 +210,8 @@
         <p class="muted" id="settingsSyncText">Collega la famiglia per condividere avanzamenti e controlli tra piu dispositivi.</p>
         <button class="primary wide" id="manageSyncButton" type="button">Configura sincronizzazione</button>
       </div>
-      <button class="secondary wide" id="demoButton" type="button">Carica dati di esempio</button>
-      <button class="danger wide" id="resetButton" type="button">Cancella diario e pagamenti</button>
+      <button class="secondary wide parent-only" id="demoButton" type="button">Carica dati di esempio</button>
+      <button class="danger wide parent-only" id="resetButton" type="button">Cancella diario e pagamenti</button>
     </form>
   </dialog>
 
@@ -210,15 +229,24 @@
         <button class="primary wide" id="sendLinkButton" type="button">Invia link di accesso</button>
       </div>
       <div id="familyStep" class="sync-step hidden">
-        <p class="muted">Crea la famiglia sul primo dispositivo. Sugli altri dispositivi entra con lo stesso codice invito.</p>
+        <p class="muted">Crea la famiglia sul primo dispositivo scegliendo due codici distinti. Sugli altri smartphone il codice usato assegnera automaticamente il ruolo.</p>
         <label>Il tuo nome<input id="memberName" placeholder="Es. Gianluca"></label>
         <label>Nome famiglia<input id="familyName" placeholder="Es. Famiglia Cestarollo"></label>
-        <label>Codice invito scelto da voi<input id="familyCode" type="password" minlength="8" placeholder="Almeno 8 caratteri"></label>
+        <label>Codice invito genitore<input id="parentCode" type="password" minlength="8" placeholder="Per tua moglie, almeno 8 caratteri"></label>
+        <label>Codice invito figlio<input id="childCode" type="password" minlength="8" placeholder="Per Gabriele, almeno 8 caratteri"></label>
+        <label class="join-code-label">Codice ricevuto<input id="familyCode" type="password" minlength="8" placeholder="Inserisci il codice ricevuto"></label>
         <div class="split-actions"><button class="primary" id="createFamilyButton" type="button">Crea famiglia</button><button class="secondary" id="joinFamilyButton" type="button">Entra in famiglia</button></div>
       </div>
       <div id="connectedStep" class="sync-step hidden">
         <div class="connected-card"><span></span><div><strong id="connectedFamilyName">Famiglia collegata</strong><p id="connectedUserName"></p></div></div>
-        <p class="muted">Le modifiche vengono sincronizzate automaticamente. Per collegare tua moglie, falle accedere con la sua email e usare il vostro codice invito.</p>
+        <p class="muted" id="connectedHelp">Le modifiche vengono sincronizzate automaticamente.</p>
+        <div class="owner-only invite-manager">
+          <strong>Codici invito</strong>
+          <p class="muted">Imposta o cambia i codici distinti da inviare a genitore e figlio.</p>
+          <label>Nuovo codice genitore<input id="newParentCode" type="password" minlength="8"></label>
+          <label>Nuovo codice figlio<input id="newChildCode" type="password" minlength="8"></label>
+          <button class="secondary wide" id="updateCodesButton" type="button">Aggiorna codici invito</button>
+        </div>
         <button class="secondary wide" id="refreshButton" type="button">Aggiorna adesso</button>
         <button class="danger wide" id="signOutButton" type="button">Esci dall'account</button>
       </div>
