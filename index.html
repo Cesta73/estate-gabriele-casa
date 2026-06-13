@@ -93,7 +93,7 @@
             <div class="section-heading small"><div><p class="eyebrow">Ultimi passi</p><h2>Attivita recenti</h2></div></div>
             <div id="recentEntries" class="timeline"></div>
           </article>
-          <article class="panel payment-panel">
+          <article class="panel payment-panel parent-only">
             <p class="eyebrow">Pagamento settimanale</p>
             <h2>Compensi approvati</h2>
             <div class="payment-number" id="paymentTotal">0,00 &euro;</div>
@@ -229,24 +229,23 @@
         <button class="primary wide" id="sendLinkButton" type="button">Invia link di accesso</button>
       </div>
       <div id="familyStep" class="sync-step hidden">
-        <p class="muted">Crea la famiglia sul primo dispositivo scegliendo due codici distinti. Sugli altri smartphone il codice usato assegnera automaticamente il ruolo.</p>
+        <p class="muted">Non appartieni ancora a una famiglia. Creala indicando il tuo nome: sarai riconosciuto come genitore proprietario.</p>
         <label>Il tuo nome<input id="memberName" placeholder="Es. Gianluca"></label>
         <label>Nome famiglia<input id="familyName" placeholder="Es. Famiglia Cestarollo"></label>
-        <label>Codice invito genitore<input id="parentCode" type="password" minlength="8" placeholder="Per tua moglie, almeno 8 caratteri"></label>
-        <label>Codice invito figlio<input id="childCode" type="password" minlength="8" placeholder="Per Gabriele, almeno 8 caratteri"></label>
-        <label class="join-code-label">Codice ricevuto<input id="familyCode" type="password" minlength="8" placeholder="Inserisci il codice ricevuto"></label>
-        <div class="split-actions"><button class="primary" id="createFamilyButton" type="button">Crea famiglia</button><button class="secondary" id="joinFamilyButton" type="button">Entra in famiglia</button></div>
+        <button class="primary wide" id="createFamilyButton" type="button">Crea famiglia</button>
       </div>
       <div id="connectedStep" class="sync-step hidden">
         <div class="connected-card"><span></span><div><strong id="connectedFamilyName">Famiglia collegata</strong><p id="connectedUserName"></p></div></div>
         <p class="muted" id="connectedHelp">Le modifiche vengono sincronizzate automaticamente.</p>
         <div class="owner-only invite-manager">
-          <strong>Codici invito</strong>
-          <p class="muted">Imposta o cambia i codici distinti da inviare a genitore e figlio.</p>
-          <label>Nuovo codice genitore<input id="newParentCode" type="password" minlength="8"></label>
-          <label>Nuovo codice figlio<input id="newChildCode" type="password" minlength="8"></label>
-          <button class="secondary wide" id="updateCodesButton" type="button">Aggiorna codici invito</button>
+          <strong>Invita un familiare</strong>
+          <p class="muted">Inserisci nome, email e ruolo. Ricevera direttamente il link personale per accedere.</p>
+          <label>Nome<input id="inviteName" placeholder="Es. Katia o Gabriele"></label>
+          <label>Email<input id="inviteEmail" type="email" placeholder="nome@email.it"></label>
+          <label>Ruolo<select id="inviteRole"><option value="adult">Genitore</option><option value="child">Figlio</option></select></label>
+          <button class="secondary wide" id="inviteMemberButton" type="button">Invia link di accesso</button>
         </div>
+        <div class="family-members"><strong>Persone della famiglia</strong><div id="familyMemberList"></div></div>
         <button class="secondary wide" id="refreshButton" type="button">Aggiorna adesso</button>
         <button class="danger wide" id="signOutButton" type="button">Esci dall'account</button>
       </div>

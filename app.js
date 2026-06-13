@@ -29,9 +29,11 @@ let assignments = read(ASSIGNMENTS_KEY, []);
 let taskFilter = "all";
 let historyFilter = "all";
 let cloud = null;
+let inviteCloud = null;
 let cloudUser = null;
 let family = null;
 let member = null;
+let familyMembers = [];
 let cloudChannel = null;
 let syncTimer = null;
 let syncState = "local";
@@ -55,7 +57,7 @@ function save() {
   scheduleCloudSave();
 }
 function taskById(id) { return tasks.find((task) => task.id === id); }
-function isParent() { return !member || member.role === "owner" || member.role === "adult"; }
+function isParent() { return member ? member.role === "owner" || member.role === "adult" : !cloudConfigured(); }
 function isOwner() { return member?.role === "owner"; }
 function roleLabel(role) { return { owner: "Genitore proprietario", adult: "Genitore", child: "Figlio" }[role] || "Membro"; }
 function entryValue(entry) {
@@ -163,6 +165,8 @@ async function loadFamily() {
   family = { id: info.family_id, name: info.family_name };
   member = { display_name: info.display_name, role: info.member_role };
   applyRole();
+  const { data: membersData } = await cloud.rpc("get_family_members");
+  familyMembers = membersData || [];
   const { data: remote, error: stateError } = await cloud.from("family_state").select("*").eq("family_id", family.id).single();
   if (stateError) {
     console.error(stateError);
@@ -198,6 +202,9 @@ async function initCloud() {
     return;
   }
   cloud = window.supabase.createClient(window.APP_CONFIG.supabaseUrl, window.APP_CONFIG.supabaseAnonKey);
+  inviteCloud = window.supabase.createClient(window.APP_CONFIG.supabaseUrl, window.APP_CONFIG.supabaseAnonKey, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: "estate-gabriele-invite-mailer" }
+  });
   const { data } = await cloud.auth.getSession();
   cloudUser = data.session?.user || null;
   if (cloudUser) await loadFamily();
@@ -209,6 +216,7 @@ async function initCloud() {
     if (!cloudUser) {
       family = null;
       member = null;
+      familyMembers = [];
       applyRole();
       setSyncState("local", "Accedi per sincronizzare");
       renderSyncDialog();
@@ -217,9 +225,11 @@ async function initCloud() {
 }
 
 function applyRole() {
-  document.body.classList.remove("child-mode", "parent-mode", "adult-mode");
+  document.body.classList.remove("child-mode", "parent-mode", "adult-mode", "guest-mode");
   if (!member) {
+    if (cloudConfigured()) document.body.classList.add("guest-mode");
     $("#roleChip").classList.add("hidden");
+    $$('[data-section="review"]').forEach((item) => item.classList.toggle("hidden", cloudConfigured()));
     return;
   }
   document.body.classList.add(member.role === "child" ? "child-mode" : "parent-mode");
@@ -367,8 +377,9 @@ function renderSyncDialog() {
     $("#connectedFamilyName").textContent = family.name;
     $("#connectedUserName").textContent = `${member?.display_name || cloudUser?.email} · ${roleLabel(member?.role)} · ${cloudUser?.email || ""}`;
     $("#connectedHelp").textContent = isParent()
-      ? "Invia il codice genitore all'altro genitore e il codice figlio a Gabriele. Il ruolo viene assegnato automaticamente."
-      : "Hai effettuato l'accesso come figlio. Puoi vedere e registrare le missioni, mentre i controlli restano ai genitori.";
+      ? "Ogni persona accede dal proprio smartphone tramite il link ricevuto via email ed e riconosciuta automaticamente."
+      : "Sei riconosciuto come figlio. Puoi vedere e registrare le missioni, mentre i controlli restano ai genitori.";
+    $("#familyMemberList").innerHTML = familyMembers.length ? familyMembers.map((person) => `<div class="family-member"><div><strong>${safe(person.display_name)}</strong><small>${safe(person.email)}${person.member_status === "invited" ? " · link inviato, accesso non ancora effettuato" : ""}</small></div><span class="member-role">${roleLabel(person.member_role)}</span></div>`).join("") : "";
   }
 }
 
@@ -511,34 +522,27 @@ $("#sendLinkButton").addEventListener("click", async () => {
 $("#createFamilyButton").addEventListener("click", async () => {
   const name = $("#memberName").value.trim();
   const familyName = $("#familyName").value.trim();
-  const parentCode = $("#parentCode").value;
-  const childCode = $("#childCode").value;
-  if (!name || !familyName || parentCode.length < 8 || childCode.length < 8) return showToast("Inserisci nome, famiglia e due codici di almeno 8 caratteri.");
-  if (parentCode === childCode) return showToast("I codici genitore e figlio devono essere diversi.");
-  const { error } = await cloud.rpc("create_family", { requested_name: familyName, parent_code: parentCode, child_code: childCode, member_name: name });
+  if (!name || !familyName) return showToast("Inserisci il tuo nome e il nome della famiglia.");
+  const { error } = await cloud.rpc("create_family", { requested_name: familyName, member_name: name });
   if (error) return showToast(`Creazione non riuscita: ${error.message}`);
   await loadFamily();
   showToast("Famiglia creata e dati sincronizzati.");
 });
-$("#joinFamilyButton").addEventListener("click", async () => {
-  const name = $("#memberName").value.trim();
-  const code = $("#familyCode").value;
-  if (!name || code.length < 8) return showToast("Inserisci il tuo nome e il codice invito.");
-  const { error } = await cloud.rpc("join_family", { invite_code: code, member_name: name });
-  if (error) return showToast("Codice non valido o famiglia non disponibile.");
-  await loadFamily();
-  showToast("Accesso alla famiglia completato.");
-});
-$("#updateCodesButton").addEventListener("click", async () => {
+$("#inviteMemberButton").addEventListener("click", async () => {
   if (!isOwner()) return;
-  const parentCode = $("#newParentCode").value;
-  const childCode = $("#newChildCode").value;
-  if (parentCode.length < 8 || childCode.length < 8 || parentCode === childCode) return showToast("Usa due codici diversi di almeno 8 caratteri.");
-  const { error } = await cloud.rpc("update_invite_codes", { parent_code: parentCode, child_code: childCode });
-  if (error) return showToast(`Aggiornamento non riuscito: ${error.message}`);
-  $("#newParentCode").value = "";
-  $("#newChildCode").value = "";
-  showToast("Codici invito aggiornati.");
+  const name = $("#inviteName").value.trim();
+  const email = $("#inviteEmail").value.trim().toLowerCase();
+  const role = $("#inviteRole").value;
+  if (!name || !email) return showToast("Inserisci nome ed email del familiare.");
+  const { error } = await cloud.rpc("create_family_invitation", { invited_email: email, invited_name: name, invited_role: role });
+  if (error) return showToast(`Invito non riuscito: ${error.message}`);
+  const redirectTo = location.href.split("#")[0].split("?")[0];
+  const { error: emailError } = await inviteCloud.auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo } });
+  if (emailError) return showToast(`Invito registrato, ma email non inviata: ${emailError.message}`);
+  $("#inviteName").value = "";
+  $("#inviteEmail").value = "";
+  await loadFamily();
+  showToast(`Link di accesso inviato a ${name}.`);
 });
 $("#refreshButton").addEventListener("click", async () => {
   await loadFamily();

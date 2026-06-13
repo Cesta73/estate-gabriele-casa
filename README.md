@@ -27,26 +27,23 @@ Supabase offre database, accesso email e piano gratuito sufficiente per questa a
 
 Le chiavi presenti in `config.js` sono pubbliche per progetto. La protezione dei dati e affidata alle regole RLS installate tramite `schema.sql`. Non inserire mai la chiave `service_role`.
 
-## Primo utilizzo
+## Primo utilizzo e inviti
 
-1. Apri il sito pubblicato e premi l'indicatore di sincronizzazione in alto.
-2. Accedi con la tua email tramite il link ricevuto.
-3. Crea la famiglia scegliendo un codice invito di almeno 8 caratteri.
-4. Tua moglie apre il sito, accede con la propria email e sceglie **Entra in famiglia** usando lo stesso codice.
+1. Esegui `supabase/schema.sql` nel SQL Editor. Lo script effettua una ripartenza pulita e cancella tutti i dati di prova della webapp.
+2. Apri il sito pubblicato, premi **Accedi per sincronizzare** e inserisci la tua email.
+3. Apri il link ricevuto e crea la famiglia indicando il tuo nome.
+4. Dalla schermata famiglia invita ogni persona indicando nome, email e ruolo.
+5. La persona invitata apre il link ricevuto sul proprio smartphone e viene riconosciuta automaticamente.
 
-Ogni controllo registra il nome della persona che lo ha eseguito. Le modifiche vengono salvate sul dispositivo e sincronizzate automaticamente.
+Non servono codici invito. L'email identifica la persona e l'invito determina nome e ruolo.
 
-## Ruoli e codici invito
-
-- Il primo genitore crea la famiglia come proprietario.
-- Il proprietario sceglie un codice **genitore** e un codice **figlio**, diversi tra loro.
-- Chi entra con il codice genitore puo suggerire attivita, controllare i lavori e segnare i pagamenti.
-- Chi entra con il codice figlio puo vedere e registrare le missioni, ma non puo usare i controlli da adulto.
-- Il proprietario puo cambiare entrambi i codici dalle impostazioni della webapp.
+- Il proprietario puo invitare familiari.
+- I genitori possono suggerire attivita, controllare i lavori e segnare i pagamenti.
+- Il figlio puo vedere e registrare le missioni, ma non puo usare i controlli da adulto.
 
 I genitori possono aggiungere lavori alla bacheca **Missioni per oggi**, scegliendo giorno e messaggio. Gabriele puo aprire la missione suggerita e registrarla come svolta.
 
-Quando viene pubblicato un aggiornamento dello schema, eseguire nuovamente tutto `supabase/schema.sql` nel SQL Editor: lo script e progettato per conservare i dati esistenti.
+Lo script attuale cancella i dati della webapp per semplificare la migrazione dal precedente sistema a codici.
 
 ## Funzioni
 

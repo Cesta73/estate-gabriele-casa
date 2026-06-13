@@ -172,7 +172,14 @@ dialog input, dialog textarea, dialog select { width: 100%; color: var(--ink); b
 .connected-card { display: flex; align-items: center; gap: 12px; padding: 15px; border-radius: 13px; background: var(--green-soft); }
 .connected-card p { color: var(--muted); margin: 3px 0 0; font-size: 12px; }
 .invite-manager { margin-top: 15px; padding: 14px; border: 1px solid var(--line); border-radius: 13px; }
+.family-members { margin-top: 15px; }
+.family-member { display: flex; justify-content: space-between; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.family-member:last-child { border-bottom: 0; }
+.family-member strong, .family-member small { display: block; }
+.family-member small { color: var(--muted); margin-top: 2px; font-size: 10px; }
+.member-role { color: var(--green); background: var(--green-soft); padding: 5px 8px; border-radius: 15px; font-size: 9px; font-weight: 900; text-transform: uppercase; }
 .child-mode .parent-only, .child-mode .owner-only { display: none !important; }
+.guest-mode .parent-only, .guest-mode .owner-only { display: none !important; }
 .parent-mode .child-only { display: none !important; }
 .adult-mode .owner-only { display: none !important; }
 #toast { position: fixed; z-index: 20; bottom: 25px; right: 25px; color: white; background: var(--green-dark); padding: 12px 17px; border-radius: 12px; font-size: 12px; font-weight: 750; opacity: 0; transform: translateY(15px); pointer-events: none; transition: .2s; box-shadow: var(--shadow); }
