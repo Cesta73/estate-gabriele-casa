@@ -28,6 +28,7 @@ alter table public.families enable row level security;
 alter table public.family_members enable row level security;
 alter table public.family_state enable row level security;
 
+drop policy if exists "Members can read their family" on public.families;
 create policy "Members can read their family"
 on public.families for select to authenticated
 using (exists (
@@ -35,10 +36,12 @@ using (exists (
   where m.family_id = families.id and m.user_id = auth.uid()
 ));
 
+drop policy if exists "Members can read their membership" on public.family_members;
 create policy "Members can read their membership"
 on public.family_members for select to authenticated
 using (user_id = auth.uid());
 
+drop policy if exists "Members can read family state" on public.family_state;
 create policy "Members can read family state"
 on public.family_state for select to authenticated
 using (exists (
@@ -46,6 +49,7 @@ using (exists (
   where m.family_id = family_state.family_id and m.user_id = auth.uid()
 ));
 
+drop policy if exists "Members can insert family state" on public.family_state;
 create policy "Members can insert family state"
 on public.family_state for insert to authenticated
 with check (exists (
@@ -53,6 +57,7 @@ with check (exists (
   where m.family_id = family_state.family_id and m.user_id = auth.uid()
 ));
 
+drop policy if exists "Members can update family state" on public.family_state;
 create policy "Members can update family state"
 on public.family_state for update to authenticated
 using (exists (
