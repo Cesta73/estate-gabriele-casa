@@ -153,6 +153,7 @@ table { width: 100%; border-collapse: collapse; min-width: 780px; }
 th, td { padding: 15px; text-align: left; border-bottom: 1px solid var(--line); font-size: 12px; }
 th { color: var(--muted); text-transform: uppercase; font-size: 10px; letter-spacing: .06em; }
 td strong { font-size: 13px; }
+.undo-approval { display: block; margin-top: 7px; border: 0; border-radius: 9px; padding: 6px 8px; color: #a54636; background: var(--coral-soft); font-size: 10px; font-weight: 850; white-space: nowrap; }
 dialog { width: min(500px, calc(100% - 28px)); border: 0; border-radius: 22px; padding: 0; color: var(--ink); background: var(--card); box-shadow: 0 30px 90px rgba(15,39,33,.3); }
 dialog::backdrop { background: rgba(19,48,40,.62); backdrop-filter: blur(3px); }
 dialog form { position: relative; padding: 28px; }

@@ -19,11 +19,13 @@ const seedTasks = [
   { id: "laundry-basket", name: "Portare i panni sporchi in lavanderia", pay: 1, symbol: "PAN", when: "A richiesta", kind: "request", rules: "Raccogliere i panni sporchi e portarli in lavanderia." },
   { id: "dishwasher", name: "Disfare e fare la lavastoviglie", pay: 1, symbol: "LAV", when: "A richiesta", kind: "request", rules: "Svuotare e riempire la lavastoviglie quando richiesto." },
   { id: "trash", name: "Mettere fuori i rifiuti giusti", pay: 1, symbol: "RIF", when: "Secondo calendario", kind: "request", rules: "Fare tutto il giro della casa, raccogliere i rifiuti e mettere fuori quelli giusti secondo calendario." },
+  { id: "extra-half", name: "Lavoro extra da 0,50 euro", pay: 0.5, symbol: "EXT", when: "A richiesta", kind: "request", rules: "Piccolo lavoro extra da concordare con un genitore." },
+  { id: "extra-one", name: "Lavoro extra da 1 euro", pay: 1, symbol: "EXT", when: "A richiesta", kind: "request", rules: "Lavoro extra da concordare con un genitore." },
   { id: "extra", name: "Extra a richiesta", pay: 2, symbol: "EXT", when: "Da concordare", kind: "agreement", rules: "Attivita da concordare di volta in volta." },
   { id: "cellar", name: "Aiutare papa a sistemare la taverna", pay: 2, perHour: true, symbol: "TAV", when: "Quando richiesto", kind: "request", rules: "Solo quando richiesto e in collaborazione con papa." }
 ];
 
-let tasks = read(TASKS_KEY, seedTasks);
+let tasks = [...new Map([...seedTasks, ...read(TASKS_KEY, [])].map((task) => [task.id, task])).values()];
 let entries = read(ENTRIES_KEY, []);
 let assignments = read(ASSIGNMENTS_KEY, []);
 let taskFilter = "all";
@@ -318,7 +320,10 @@ function renderHistory() {
   $("#historyRows").innerHTML = filtered.length ? filtered.map((entry) => {
     const task = taskById(entry.taskId);
     const control = entry.adultNote ? `${safe(entry.adultNote)}${entry.reviewedBy ? `<br><small>di ${safe(entry.reviewedBy)}</small>` : ""}` : "-";
-    return `<tr><td>${dateText(entry.date)}</td><td><strong>${safe(task?.name || entry.taskName)}</strong></td><td>${safe(entry.submittedBy || "-")}</td><td>${safe(entry.note || "-")}</td><td>${control}</td><td><span class="status status-${entry.status}">${statusLabel(entry.status)}</span></td><td><strong>${money(entryValue(entry))}</strong></td></tr>`;
+    const undoApproval = isParent() && entry.status === "approved"
+      ? `<button class="undo-approval" data-undo-approval="${entry.id}">Annulla approvazione</button>`
+      : "";
+    return `<tr><td>${dateText(entry.date)}</td><td><strong>${safe(task?.name || entry.taskName)}</strong></td><td>${safe(entry.submittedBy || "-")}</td><td>${safe(entry.note || "-")}</td><td>${control}</td><td><span class="status status-${entry.status}">${statusLabel(entry.status)}</span>${undoApproval}</td><td><strong>${money(entryValue(entry))}</strong></td></tr>`;
   }).join("") : `<tr><td colspan="7"><div class="empty">Nessuna voce in questa vista.</div></td></tr>`;
 }
 
@@ -413,6 +418,18 @@ document.addEventListener("click", (event) => {
     entry.reviewedAt = new Date().toISOString();
     save(); renderAll();
     showToast(entry.status === "approved" ? "Lavoro approvato." : "Nota inviata a Gabriele.");
+  }
+  const undoApproval = event.target.closest("[data-undo-approval]");
+  if (undoApproval && isParent()) {
+    const entry = entries.find((item) => item.id === undoApproval.dataset.undoApproval);
+    if (!entry || entry.status !== "approved") return;
+    if (!confirm("Annullare l'approvazione e riportare il lavoro tra quelli da controllare?")) return;
+    entry.status = "pending";
+    entry.adultNote = "";
+    entry.reviewedBy = "";
+    entry.reviewedAt = "";
+    entry.updatedAt = new Date().toISOString();
+    save(); renderAll(); showToast("Approvazione annullata. Il lavoro e di nuovo da controllare.");
   }
 });
 
