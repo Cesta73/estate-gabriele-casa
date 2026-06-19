@@ -310,7 +310,7 @@ function renderReview() {
     return `<article class="review-card">
       <div><p>${dateText(entry.date)} &middot; ${task?.perHour ? `${entry.quantity} ore` : `quantita ${entry.quantity}`}</p><h3>${safe(task?.name || entry.taskName)}</h3><p>Nota: ${safe(entry.note || "Nessuna nota.")} &middot; <strong>${money(entryValue(entry))}</strong></p></div>
       <div class="review-note"><label for="note-${entry.id}">Nota del controllo</label><input id="note-${entry.id}" placeholder="Es. Ottimo lavoro, grazie!"></div>
-      <div class="review-actions"><button class="redo" data-review="${entry.id}" data-result="redo">Da sistemare</button><button class="approve" data-review="${entry.id}" data-result="approved">Approva</button></div>
+      <div class="review-actions"><button class="redo" data-review="${entry.id}" data-result="redo">Da sistemare</button><button class="approve approval-stamp" data-review="${entry.id}" data-result="approved"><span>Fatto</span><b>BENE</b></button></div>
     </article>`;
   }).join("") : `<div class="empty">Nessun lavoro da controllare. Tutto in ordine.</div>`;
 }

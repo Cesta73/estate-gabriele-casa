@@ -4,8 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#285f68">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <title>Estate di Gabriele</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=20260619-2">
 </head>
 <body>
   <div class="app-shell">
@@ -57,10 +58,19 @@
         </div>
 
         <div class="stats-grid">
-          <article class="stat-card green">
-            <span class="stat-label">Nel salvadanaio</span>
-            <strong id="approvedTotal">0,00 &euro;</strong>
-            <small>approvati, da pagare</small>
+          <article class="stat-card green savings-card">
+            <div class="savings-copy">
+              <span class="stat-label">Nel salvadanaio</span>
+              <strong id="approvedTotal">0,00 &euro;</strong>
+              <small>approvati, da pagare</small>
+            </div>
+            <div class="money-jar" aria-hidden="true">
+              <span class="jar-lid"></span>
+              <span class="coin coin-one">&euro;</span>
+              <span class="coin coin-two">&euro;</span>
+              <span class="coin coin-three">&euro;</span>
+              <span class="jar-label">ESTATE</span>
+            </div>
           </article>
           <article class="stat-card amber">
             <span class="stat-label">In attesa</span>
@@ -258,6 +268,6 @@
   <div id="toast" role="status"></div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
-  <script src="app.js"></script>
+  <script src="app.js?v=20260619-2"></script>
 </body>
 </html>
