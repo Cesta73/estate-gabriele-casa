@@ -44,8 +44,16 @@ let currentAssignmentId = null;
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const money = (value) => new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(value || 0);
-const dateText = (value) => new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "short", year: "numeric" }).format(new Date(`${value}T12:00:00`));
-const today = () => new Date().toISOString().slice(0, 10);
+const dateText = (value) => {
+  const date = value ? new Date(`${value}T12:00:00`) : null;
+  if (!date || Number.isNaN(date.getTime())) return "Data non indicata";
+  return new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "short", year: "numeric" }).format(date);
+};
+const today = () => {
+  const date = new Date();
+  date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+  return date.toISOString().slice(0, 10);
+};
 const safe = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[char]);
 
 function read(key, fallback) {
@@ -64,7 +72,9 @@ function isOwner() { return member?.role === "owner"; }
 function roleLabel(role) { return { owner: "Genitore proprietario", adult: "Genitore", child: "Figlio" }[role] || "Membro"; }
 function entryValue(entry) {
   const task = taskById(entry.taskId);
-  return task ? task.pay * entry.quantity : entry.value || 0;
+  const quantity = Number(entry.quantity || 1);
+  if (task) return Number(task.pay || 0) * quantity;
+  return Number(entry.value || 0);
 }
 function statusLabel(status) {
   return { pending: "Da controllare", approved: "Approvato", redo: "Da sistemare", paid: "Pagato" }[status] || status;
@@ -299,7 +309,10 @@ function renderAssignments() {
 }
 
 function renderReview() {
-  if (!isParent()) return;
+  if (!isParent()) {
+    $("#reviewBadge").classList.add("hidden");
+    return;
+  }
   const pending = entries.filter((entry) => entry.status === "pending");
   $("#reviewPendingCount").textContent = pending.length;
   $("#reviewPendingValue").textContent = money(pending.reduce((sum, entry) => sum + entryValue(entry), 0));
@@ -347,6 +360,10 @@ function navigate(section) {
 
 function openComplete(taskId, assignmentId = null) {
   const task = taskById(taskId);
+  if (!task) {
+    showToast("Attivita non trovata. Aggiorna i dati e riprova.");
+    return;
+  }
   currentAssignmentId = assignmentId;
   $("#completeTaskId").value = task.id;
   $("#completeTitle").textContent = task.name;
@@ -405,6 +422,7 @@ document.addEventListener("click", (event) => {
   const dismiss = event.target.closest("[data-dismiss-assignment]");
   if (dismiss && isParent()) {
     const assignment = assignments.find((item) => item.id === dismiss.dataset.dismissAssignment);
+    if (!assignment) return;
     assignment.status = "dismissed";
     assignment.updatedAt = new Date().toISOString();
     save(); renderAll(); showToast("Missione rimossa dalla bacheca.");
@@ -412,10 +430,12 @@ document.addEventListener("click", (event) => {
   const review = event.target.closest("[data-review]");
   if (review && isParent()) {
     const entry = entries.find((item) => item.id === review.dataset.review);
+    if (!entry || !["approved", "redo"].includes(review.dataset.result)) return;
     entry.status = review.dataset.result;
-    entry.adultNote = $(`#note-${entry.id}`).value.trim();
+    entry.adultNote = $(`#note-${entry.id}`)?.value.trim() || "";
     entry.reviewedBy = member?.display_name || "Adulto";
     entry.reviewedAt = new Date().toISOString();
+    entry.updatedAt = entry.reviewedAt;
     save(); renderAll();
     showToast(entry.status === "approved" ? "Lavoro approvato." : "Nota inviata a Gabriele.");
   }
@@ -437,6 +457,7 @@ $("#completeQuantity").addEventListener("input", updateCalculatedPay);
 $("#completeForm").addEventListener("submit", (event) => {
   event.preventDefault();
   const task = taskById($("#completeTaskId").value);
+  if (!task) return showToast("Attivita non trovata. Riapri la missione e riprova.");
   entries.push({
     id: crypto.randomUUID(), taskId: task.id, taskName: task.name,
     date: $("#completeDate").value, quantity: Number($("#completeQuantity").value),

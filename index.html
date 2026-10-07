@@ -5,15 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#285f68">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <title>Estate di Gabriele</title>
-  <link rel="stylesheet" href="styles.css?v=20260619-2">
+  <title>Diario di Gabriele</title>
+  <link rel="stylesheet" href="styles.css?v=20261007-1">
 </head>
 <body>
   <div class="app-shell">
     <aside class="sidebar">
       <div class="brand">
         <div class="brand-mark">G</div>
-        <div><strong>Estate di Gabriele</strong><span>Diario delle missioni</span></div>
+        <div><strong>Diario di Gabriele</strong><span>Missioni di casa</span></div>
       </div>
       <nav class="nav" aria-label="Navigazione principale">
         <button class="nav-item active" data-section="dashboard"><span class="nav-icon">01</span>Oggi</button>
@@ -23,7 +23,7 @@
       </nav>
       <div class="sidebar-note">
         <span>Regola d'oro</span>
-        <p>In caso di dubbi chiedi aiuto. Il lavoro conta quando e fatto al meglio.</p>
+        <p>In caso di dubbi chiedi aiuto. Il lavoro conta quando e fatto con cura.</p>
       </div>
     </aside>
 
@@ -43,15 +43,16 @@
       <section class="page active" id="dashboard">
         <div class="hero">
           <div class="hero-copy">
-            <p class="eyebrow light">La tua estate, un passo alla volta</p>
-            <h2>Pronto per una nuova missione?</h2>
+            <p class="eyebrow light">Tutto l'anno, un passo alla volta</p>
+            <h2>Pronto per una nuova missione di casa?</h2>
             <p>Scegli un'attivita, falla con cura e registrala. Dopo il controllo, il compenso entra nel salvadanaio.</p>
             <button class="primary light-button" data-go="tasks">Scegli una missione</button>
           </div>
           <div class="hero-orbit" aria-hidden="true">
             <div class="sun"></div>
-            <div class="postcard postcard-one"><span>ESTATE</span><b>2026</b></div>
+            <div class="postcard postcard-one"><span>CASA</span><b>365</b></div>
             <div class="postcard postcard-two"><span>FATTO</span><b>✓</b></div>
+            <div class="season-ribbon"><span>PRIM</span><span>EST</span><span>AUT</span><span>INV</span></div>
             <div class="hero-wave wave-one"></div>
             <div class="hero-wave wave-two"></div>
           </div>
@@ -69,7 +70,7 @@
               <span class="coin coin-one">&euro;</span>
               <span class="coin coin-two">&euro;</span>
               <span class="coin coin-three">&euro;</span>
-              <span class="jar-label">ESTATE</span>
+              <span class="jar-label">CASA</span>
             </div>
           </article>
           <article class="stat-card amber">
@@ -96,7 +97,7 @@
         <div class="assignment-grid" id="assignmentList"></div>
 
         <div class="section-heading">
-          <div><p class="eyebrow">Partenza rapida</p><h2>Missioni consigliate</h2></div>
+          <div><p class="eyebrow">Partenza rapida</p><h2>Missioni utili</h2></div>
           <button class="text-button" data-go="tasks">Vedi tutte</button>
         </div>
         <div class="task-grid compact" id="suggestedTasks"></div>
@@ -118,7 +119,7 @@
 
       <section class="page" id="tasks">
         <div class="section-heading page-heading">
-          <div><p class="eyebrow">Dal foglio delle attivita</p><h2>Scegli una missione</h2></div>
+          <div><p class="eyebrow">Attivita di casa</p><h2>Scegli una missione</h2></div>
           <button class="primary parent-only" id="customTaskButton">+ Nuova attivita</button>
         </div>
         <div class="filter-row">
@@ -268,6 +269,6 @@
   <div id="toast" role="status"></div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
-  <script src="app.js?v=20260619-2"></script>
+  <script src="app.js?v=20261007-1"></script>
 </body>
 </html>

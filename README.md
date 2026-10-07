@@ -1,15 +1,15 @@
-# Estate di Gabriele
+# Diario di Gabriele
 
-Webapp familiare per gestire attivita estive, controlli e pagamenti. Funziona offline sul singolo dispositivo e puo sincronizzare i dati tra piu familiari tramite Supabase.
+Webapp familiare per gestire le attivita di casa durante tutto l'anno, con controlli, pagamenti e missioni suggerite. Funziona offline sul singolo dispositivo e puo sincronizzare i dati tra piu familiari tramite Supabase.
 
 ## Pubblicazione su GitHub Pages
 
-1. Crea un nuovo repository GitHub, per esempio `estate-gabriele`.
+1. Crea un nuovo repository GitHub, per esempio `estate-gabriele-casa`.
 2. Carica tutti i file di questa cartella nel repository e usa il branch `main`.
 3. Su GitHub apri **Settings > Pages** e scegli **GitHub Actions** come sorgente.
 4. Al primo caricamento, il flusso `Pubblica su GitHub Pages` pubblichera automaticamente il sito.
 
-L'indirizzo sara simile a `https://TUO-UTENTE.github.io/estate-gabriele/`.
+L'indirizzo sara simile a `https://TUO-UTENTE.github.io/estate-gabriele-casa/`.
 
 ## Sincronizzazione familiare
 
